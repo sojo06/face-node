@@ -23,6 +23,12 @@ app.use(cors({
   },
   credentials: true, // if you're using cookies or sessions
 }));
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', 'https://face-react-psi.vercel.app');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  next();
+});
 app.use(express.json());
 app.use('/uploads', express.static('uploads'));
 app.use("/api/auth",authRoutes)
