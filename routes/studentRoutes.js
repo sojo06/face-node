@@ -3,7 +3,7 @@ import {
   getStudentProfile,
   getTrainingData,
   getAttendanceHistory
-} from '../controllers/studentController.js';
+} from '../controllers/StudentController.js';
 import protect from '../middleware/protect.js';
 const router = express.Router();
 
