@@ -5,7 +5,8 @@ import {
   getClassSummary,
   uploadStudentImages,
   triggerFullTraining,
-  markAttendance
+  markAttendance,
+  getAttendanceHistory
 } from '../controllers/teacherController.js';
 
 const router = express.Router();
@@ -17,5 +18,6 @@ router.get('/class-summary', protect,getClassSummary);
 router.post('/upload-images', upload.array('files'),protect, uploadStudentImages);
 router.post('/train-all',protect, triggerFullTraining);
 router.post('/mark-attendance', upload.single('image'),protect, markAttendance);
+router.get('/attendance-history', protect, getAttendanceHistory);
 
 export default router;
