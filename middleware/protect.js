@@ -31,6 +31,7 @@ const protect = async (req, res, next) => {
     };
     req.body.department = user.department;
     req.body.division = user.division;
+    
 
     next(); // Pass to the next middleware or route handler
   } catch (error) {

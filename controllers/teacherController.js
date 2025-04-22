@@ -216,3 +216,32 @@ export const markAttendance = async (req, res) => {
     res.status(500).json({ error: 'Something went wrong while marking attendance' });
   }
 };
+
+export const getAttendanceHistory = async (req, res) => {
+  try {
+    const { date, fromTime, toTime } = req.query;
+
+    if (!date || !fromTime || !toTime) {
+      return res.status(400).json({ message: "Date, fromTime and toTime are required" });
+    }
+
+    const fromDateTime = new Date(`${date}T${fromTime}`);
+    const toDateTime = new Date(`${date}T${toTime}`);
+
+    const records = await Attendance.find({
+      createdAt: { $gte: fromDateTime, $lte: toDateTime },
+    }).populate('studentId', 'name email ');
+
+    const formatted = records.map(record => ({
+      name: record.studentId?.name,
+      email: record.studentId?.email,
+      uid: record.studentId?._id,
+      time: record.createdAt.toLocaleString(),
+    }));
+
+    res.status(200).json({ records: formatted });
+  } catch (err) {
+    console.error("Error fetching attendance history:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
