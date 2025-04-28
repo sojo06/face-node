@@ -19,7 +19,7 @@ const s3 = new S3Client({
   }
 });
 export const getClassSummary = async (req, res) => {
-  const { department, division } = req.user;
+  const { department, division } = req.query;
   console.log("Department: ", department);
   console.log("Division: ", division);
 
