@@ -17,7 +17,7 @@ const upload = multer({ storage: multer.memoryStorage() });
 router.get('/class-summary', protect,getClassSummary);
 router.post('/upload-images', upload.array('files'),protect, uploadStudentImages);
 router.post('/train-all',protect, triggerFullTraining);
-router.post('/mark-attendance', upload.single('image'),protect, markAttendance);
+router.post('/mark-attendance',protect, upload.single('image'), markAttendance);
 router.get('/attendance-history', protect, getAttendanceHistory);
 
 export default router;

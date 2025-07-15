@@ -167,9 +167,11 @@ export const triggerFullTraining = async (req, res) => {
 
 export const markAttendance = async (req, res) => {
   try {
-    const { department, division } = req.body;
+    console.log("jk")
+    const { department, division } = req.user;
 
-   
+       console.log(department,division)
+
     let modelName=`${department}-${division}`
     const modelMeta = await ModelMeta.findOne({ modelName });
     if (!modelMeta) {
