@@ -247,3 +247,44 @@ export const getAttendanceHistory = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+export const uploadTrainedModel = async (req, res) => {
+  try {
+    const { department, division } = req.body;
+    const file = req.file;
+
+    if (!file || !department || !division) {
+      return res.status(400).json({ error: 'Missing model file or metadata' });
+    }
+
+    const modelName = `${department}-${division}`;
+    
+    // Send to FastAPI
+    const fastApiRes = await axios.post(
+      `${process.env.FLASK_API_URL}/upload-model`, // Replace with your FastAPI endpoint
+      {
+        modelName,
+        modelFile: file.buffer.toString('base64'), // convert to base64
+      },
+      {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      }
+    );
+
+    const modelPath = fastApiRes.data.path;
+
+    // Save metadata in MongoDB
+    const modelDoc = new ModelMeta({
+      modelName,
+      department,
+      division,
+      filePath: modelPath,
+    });
+
+    await modelDoc.save();
+
+    return res.status(200).json({ message: 'Model uploaded', path: modelPath });
+  } catch (error) {
+    console.error('Upload model error:', error);
+    return res.status(500).json({ error: 'Server error during model upload' });
+  }
+};
