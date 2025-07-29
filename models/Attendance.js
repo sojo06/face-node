@@ -5,7 +5,9 @@ const attendanceSchema = new mongoose.Schema({
   label:String,
   department: String,
   division: String,
-  date: String
+  date: String,
+    subject: String, // ✅ Add this
+
 }, { timestamps: true });
 
 export default mongoose.model('Attendance', attendanceSchema);

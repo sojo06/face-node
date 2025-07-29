@@ -2,8 +2,8 @@ import User from '../models/User.js';
 
 export const createUser = async (req, res) => {
   try {
-    const { name, email, role, department, division } = req.body;
-
+    const { name, email, role, department, division,rollNo } = req.body;
+    console.log(req.body.rollNo);
     if (!name || !email || !role || !department || !division) {
       return res.status(400).json({ message: 'All fields are required' });
     }
@@ -13,7 +13,7 @@ export const createUser = async (req, res) => {
       return res.status(409).json({ message: 'Email already exists' });
     }
 
-    const user = await User.create({ name, email, role, department, division });
+    const user = await User.create({ name, email, role, department, division,rollno:rollNo });
     res.status(201).json({ message: 'User created successfully', user });
   } catch (err) {
     console.error('Error creating user:', err);

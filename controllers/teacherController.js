@@ -9,8 +9,11 @@ import path from "path";
 import mime from "mime-types";
 import { v4 as uuidv4 } from "uuid";
 import axios from "axios"; // Import axios for making HTTP requests to Flask API
-import { log } from "console";
+import FormData from 'form-data';
+import { fileURLToPath } from "url";
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 const s3 = new S3Client({
   region: process.env.AWS_REGION, // e.g., 'ap-south-1'
   credentials: {
@@ -162,51 +165,51 @@ export const triggerFullTraining = async (req, res) => {
   }
 };
 
+
+
 // export const markAttendance = async (req, res) => {
 //   try {
-//     console.log("jk");
 //     const { department, division } = req.user;
-
-//     console.log(department, division);
-
-//     let modelName = `${department}-${division}`;
+//     const modelName = `${department}-${division}`;
 //     const modelMeta = await ModelMeta.findOne({ modelName });
+
 //     if (!modelMeta) {
 //       return res.status(404).json({ error: "Model not found" });
 //     }
 
-//     // Convert image to base64 from memory buffer
-//     const base64Image = req.file.buffer.toString("base64");
-//     // console.log('Base64 Image:', base64Image);
-//     console.log("Model Path:", modelMeta.filePath);
-//     // Send to Flask directly
 //     const normalizedPath = modelMeta.filePath.replace(/\\/g, "/");
 
-//     const flaskResponse = await axios.post(
-//       `${process.env.FLASK_API_URL}/verify`,
-//       {
-//         base64Image,
-//         modelPath: normalizedPath,
-//       }
-//     );
+//     if (!req.files || req.files.length === 0) {
+//       return res.status(400).json({ error: "No images provided" });
+//     }
 
-//     const verifiedStudents = flaskResponse.data?.verifiedStudents || [];
+//     const verifiedAll = [];
 
+//     // Loop through each uploaded file
+//     for (const file of req.files) {
+//       const base64Image = file.buffer.toString("base64");
+
+//       const flaskResponse = await axios.post(
+//         `${process.env.FLASK_API_URL}/verify`,
+//         {
+//           base64Image,
+//           modelPath: normalizedPath,
+//         }
+//       );
+
+//       const verifiedStudents = flaskResponse.data?.verifiedStudents || [];
+//       verifiedAll.push(...verifiedStudents);
+//     }
+
+//     const uniqueVerified = [...new Set(verifiedAll)];
 //     const date = new Date().toISOString().split("T")[0];
-//     const saved = [];
-//     console.log("Verified Students:", verifiedStudents);
-//     for (const label of verifiedStudents) {
-//       if (label=="Unknown"){
-//         continue;
-//       }
-//       // Get current time
-//       const now = new Date();
+//     const now = new Date();
+//     const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+//     const oneHourLater = new Date(now.getTime() + 60 * 60 * 1000);
 
-//       // Define time range: 1 hour before and after current time
-//       const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
-//       const oneHourLater = new Date(now.getTime() + 60 * 60 * 1000);
+//     for (const label of uniqueVerified) {
+//       if (label === "Unknown") continue;
 
-//       // Check if attendance already exists for this label within 1 hour
 //       const existing = await Attendance.findOne({
 //         label: label,
 //         createdAt: {
@@ -216,21 +219,15 @@ export const triggerFullTraining = async (req, res) => {
 //       });
 
 //       if (!existing) {
-//         // If not found, create a new attendance entry
-//        const attendance= await Attendance.create({ label: label });
+//         await Attendance.create({ label });
 //       } else {
-//         console.log(
-//           `Attendance already marked for ${label} within the last hour.`
-//         );
+//         console.log(`Attendance already marked for ${label} within 1 hour.`);
 //       }
-
-//       // const user = await User.findById(studentId);
-
-      
 //     }
 
 //     res.json({
 //       message: "Attendance marked",
+//       verified: uniqueVerified.filter((v) => v !== "Unknown"),
 //     });
 //   } catch (error) {
 //     console.error(
@@ -241,15 +238,19 @@ export const triggerFullTraining = async (req, res) => {
 //       .status(500)
 //       .json({ error: "Something went wrong while marking attendance" });
 //   }
-//};
-
+// };
 
 export const markAttendance = async (req, res) => {
   try {
-    const { department, division } = req.user;
+    const { department, division ,subject } = req.body;
+    console.log(department," ",division);
+    if (!department || !division || !subject) {
+  return res.status(400).json({ error: "Missing department, division, or subject" });
+}
+
     const modelName = `${department}-${division}`;
     const modelMeta = await ModelMeta.findOne({ modelName });
-
+    console.log(modelMeta);
     if (!modelMeta) {
       return res.status(404).json({ error: "Model not found" });
     }
@@ -261,11 +262,12 @@ export const markAttendance = async (req, res) => {
     }
 
     const verifiedAll = [];
-
-    // Loop through each uploaded file
+    console.log(req.files)
     for (const file of req.files) {
-      const base64Image = file.buffer.toString("base64");
-
+        const filePath = path.join(__dirname, "..", file.path); // or adjust '..' if needed
+  const fileData = fs.readFileSync(filePath); // read from disk
+  const base64Image = fileData.toString("base64");
+      console.log(normalizedPath);
       const flaskResponse = await axios.post(
         `${process.env.FLASK_API_URL}/verify`,
         {
@@ -276,27 +278,56 @@ export const markAttendance = async (req, res) => {
 
       const verifiedStudents = flaskResponse.data?.verifiedStudents || [];
       verifiedAll.push(...verifiedStudents);
+        fs.unlinkSync(filePath);
+
     }
 
     const uniqueVerified = [...new Set(verifiedAll)];
-    const date = new Date().toISOString().split("T")[0];
     const now = new Date();
     const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
     const oneHourLater = new Date(now.getTime() + 60 * 60 * 1000);
+    const today = now.toISOString().split("T")[0];
+
+    const finalVerified = [];
 
     for (const label of uniqueVerified) {
       if (label === "Unknown") continue;
 
+      // Split label into rollno and name (assuming "rollno_name" format)
+      const [rollnoPart, ...nameParts] = label.split("_");
+      const rollno = Number(rollnoPart);
+      const name = nameParts.join("_");
+
+      if (!rollno || !name) continue;
+      console.log(rollno," ",name)
+      const student = await User.findOne({
+        name,
+        rollno,
+        role: "student",
+       
+      });
+
+      if (!student) {
+        console.log(`No matching student found for label: ${label}`);
+        continue;
+      }
+
       const existing = await Attendance.findOne({
-        label: label,
-        createdAt: {
-          $gte: oneHourAgo,
-          $lte: oneHourLater,
-        },
+        studentId: student._id,
+        createdAt: { $gte: oneHourAgo, $lte: oneHourLater }
       });
 
       if (!existing) {
-        await Attendance.create({ label });
+        await Attendance.create({
+          studentId: student._id,
+          label,
+          department,
+          division,
+            subject, 
+
+          date: today
+        });
+        finalVerified.push(label);
       } else {
         console.log(`Attendance already marked for ${label} within 1 hour.`);
       }
@@ -304,19 +335,18 @@ export const markAttendance = async (req, res) => {
 
     res.json({
       message: "Attendance marked",
-      verified: uniqueVerified.filter((v) => v !== "Unknown"),
+      verified: finalVerified
     });
   } catch (error) {
     console.error(
       "Error marking attendance:",
       error.response?.data || error.message
     );
-    res
-      .status(500)
-      .json({ error: "Something went wrong while marking attendance" });
+    res.status(500).json({
+      error: "Something went wrong while marking attendance"
+    });
   }
 };
-
 
 export const getAttendanceHistory = async (req, res) => {
   try {
@@ -351,6 +381,9 @@ export const getAttendanceHistory = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
+
+
 export const uploadTrainedModel = async (req, res) => {
   try {
     const { department, division } = req.body;
@@ -362,33 +395,58 @@ export const uploadTrainedModel = async (req, res) => {
 
     const modelName = `${department}-${division}`;
 
+    // Prepare form-data payload
+    const form = new FormData();
+    form.append('model', fs.createReadStream(file.path), file.originalname);
+    form.append('department', department);
+    form.append('division', division);
+
     // Send to FastAPI
     const fastApiRes = await axios.post(
-      `${process.env.FLASK_API_URL}/upload-model`, // Replace with your FastAPI endpoint
+      `${process.env.FASTAPI_URL}/upload-model`,
+      form,
       {
-        modelName,
-        modelFile: file.buffer.toString("base64"), // convert to base64
-      },
-      {
-        headers: { "Content-Type": "multipart/form-data" },
+        headers: {
+          ...form.getHeaders(),
+          maxBodyLength: Infinity, // <-- ensure large file support
+          maxContentLength: Infinity
+        }
       }
     );
 
-    const modelPath = fastApiRes.data.path;
+    // Clean up temp file
+    fs.unlink(file.path, (err) => {
+      if (err) console.error('Failed to delete temp file:', err);
+    });
 
     // Save metadata in MongoDB
     const modelDoc = new ModelMeta({
       modelName,
       department,
       division,
-      filePath: modelPath,
+      filePath: fastApiRes.data.model_path // match FastAPI response
     });
 
     await modelDoc.save();
 
-    return res.status(200).json({ message: "Model uploaded", path: modelPath });
+    return res.status(200).json({
+      message: 'Model uploaded successfully',
+      path: fastApiRes.data.model_path
+    });
+
   } catch (error) {
-    console.error("Upload model error:", error);
-    return res.status(500).json({ error: "Server error during model upload" });
+    console.error('Upload model error:', error.response?.data || error.message);
+    return res.status(500).json({ error: 'Error uploading model' });
+  }
+};
+export const getUploadedModels = async (req, res) => {
+  try {
+    console.log("wd")
+    const models = await ModelMeta.find().sort({ createdAt: -1 });
+    console.log(models) // newest first
+    return res.status(200).json(models);
+  } catch (error) {
+    console.error('Error fetching model list:', error);
+    return res.status(500).json({ error: 'Failed to fetch model list' });
   }
 };
